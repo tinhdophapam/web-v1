@@ -40,10 +40,7 @@ class AudioPlayer {
         this.copyLink = document.getElementById('copyLink');
         this.totalTracks = document.getElementById('totalTracks');
         this.totalFavorites = document.getElementById('totalFavorites');
-        this.menuToggle = document.getElementById('menuToggle');
-        this.sidebar = document.getElementById('sidebar');
-        this.sidebarOverlay = document.getElementById('sidebarOverlay');
-        
+
         // Mini Player Elements
         this.miniPlayer = document.getElementById('miniPlayer');
         this.miniPlayBtn = document.getElementById('miniPlayBtn');
@@ -789,28 +786,6 @@ class AudioPlayer {
             const desktopIcon = this.themeToggleDesktop.querySelector('i');
             if (desktopIcon) desktopIcon.className = iconClass;
         }
-    }
-
-    // ===== Mobile Sidebar Toggle =====
-    toggleSidebar() {
-        this.sidebar.classList.toggle('show');
-        if (this.sidebarOverlay) {
-            this.sidebarOverlay.classList.toggle('show');
-        }
-        // Prevent body scroll when sidebar is open
-        if (this.sidebar.classList.contains('show')) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-        }
-    }
-
-    closeSidebar() {
-        this.sidebar.classList.remove('show');
-        if (this.sidebarOverlay) {
-            this.sidebarOverlay.classList.remove('show');
-        }
-        document.body.style.overflow = '';
     }
 
     // ===== Mini Player Functions =====
@@ -1702,23 +1677,6 @@ class AudioPlayer {
         if (this.themeToggleDesktop) {
             this.themeToggleDesktop.addEventListener('click', () => this.toggleTheme());
         }
-
-        // Mobile Menu Toggle
-        if (this.menuToggle) {
-            this.menuToggle.addEventListener('click', () => this.toggleSidebar());
-        }
-
-        // Close sidebar when clicking overlay
-        if (this.sidebarOverlay) {
-            this.sidebarOverlay.addEventListener('click', () => this.closeSidebar());
-        }
-
-        // Close sidebar when clicking on a track (mobile)
-        this.playlist.addEventListener('click', (e) => {
-            if (e.target.closest('.track-item') && window.innerWidth <= 968) {
-                this.closeSidebar();
-            }
-        });
 
         // Mini Player Controls
         if (this.miniPlayBtn) {

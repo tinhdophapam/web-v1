@@ -254,6 +254,56 @@
                 </div>
             </div>
         </div>
+
+        <!-- Mini Player (Mobile) -->
+        <div class="mini-player" id="miniPlayer">
+            <div class="mini-progress-bar" id="miniProgressBar">
+                <div class="mini-progress-fill" id="miniProgressFill"></div>
+            </div>
+            <div class="mini-player-content" id="miniPlayerContent">
+                <div class="mini-player-info">
+                    <div class="mini-album-art">
+                        <i class="fas fa-dharmachakra"></i>
+                    </div>
+                    <div class="mini-track-info">
+                        <div class="mini-track-title" id="miniTrackTitle">Chọn bài giảng</div>
+                        <div class="mini-track-time">
+                            <span id="miniCurrentTime">0:00</span> / <span id="miniDuration">0:00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mini-player-controls">
+                    <button class="mini-control-btn" id="miniPrevBtn">
+                        <i class="fas fa-step-backward"></i>
+                    </button>
+                    <button class="mini-control-btn mini-play-btn" id="miniPlayBtn">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button class="mini-control-btn" id="miniNextBtn">
+                        <i class="fas fa-step-forward"></i>
+                    </button>
+                    <button class="mini-control-btn" id="miniCloseBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation Bar (Mobile) -->
+        <div class="bottom-nav" id="bottomNav">
+            <button class="nav-item active" data-nav="playlist">
+                <i class="fas fa-list"></i>
+                <span>Playlist</span>
+            </button>
+            <button class="nav-item" data-nav="library">
+                <i class="fas fa-book"></i>
+                <span>Thư viện</span>
+            </button>
+            <button class="nav-item" data-nav="history">
+                <i class="fas fa-history"></i>
+                <span>Lịch sử</span>
+            </button>
+        </div>
     </div>
 
     <script src="app.js"></script>

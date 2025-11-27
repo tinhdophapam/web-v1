@@ -43,6 +43,22 @@ class AudioPlayer {
         this.menuToggle = document.getElementById('menuToggle');
         this.sidebar = document.getElementById('sidebar');
         this.sidebarOverlay = document.getElementById('sidebarOverlay');
+        
+        // Mini Player Elements
+        this.miniPlayer = document.getElementById('miniPlayer');
+        this.miniPlayBtn = document.getElementById('miniPlayBtn');
+        this.miniPrevBtn = document.getElementById('miniPrevBtn');
+        this.miniNextBtn = document.getElementById('miniNextBtn');
+        this.miniCloseBtn = document.getElementById('miniCloseBtn');
+        this.miniTrackTitle = document.getElementById('miniTrackTitle');
+        this.miniCurrentTime = document.getElementById('miniCurrentTime');
+        this.miniDuration = document.getElementById('miniDuration');
+        this.miniProgressBar = document.getElementById('miniProgressBar');
+        this.miniProgressFill = document.getElementById('miniProgressFill');
+        this.miniPlayerContent = document.getElementById('miniPlayerContent');
+        
+        // Bottom Nav
+        this.bottomNav = document.getElementById('bottomNav');
 
         // State
         this.lectures = [];
@@ -318,6 +334,10 @@ class AudioPlayer {
         // Add playing animation to album art
         const albumArt = document.querySelector('.album-art-inner');
         if (albumArt) albumArt.classList.add('playing');
+        
+        // Update mini player
+        this.updateMiniPlayer(track);
+        this.showMiniPlayer();
     }
 
     // ===== Update Active Track Highlight =====
@@ -388,6 +408,14 @@ class AudioPlayer {
             this.progressFill.style.width = `${percent}%`;
             this.progressHandle.style.left = `${percent}%`;
             this.currentTimeEl.textContent = this.formatTime(currentTime);
+            
+            // Update mini player progress
+            if (this.miniProgressFill) {
+                this.miniProgressFill.style.width = `${percent}%`;
+            }
+            if (this.miniCurrentTime) {
+                this.miniCurrentTime.textContent = this.formatTime(currentTime);
+            }
         }
     }
 
@@ -501,6 +529,103 @@ class AudioPlayer {
             this.sidebarOverlay.classList.remove('show');
         }
         document.body.style.overflow = '';
+    }
+
+    // ===== Mini Player Functions =====
+    updateMiniPlayer(track) {
+        if (this.miniTrackTitle) {
+            this.miniTrackTitle.textContent = track.title;
+        }
+        if (this.miniDuration && this.audio.duration) {
+            this.miniDuration.textContent = this.formatTime(this.audio.duration);
+        }
+    }
+
+    showMiniPlayer() {
+        if (this.miniPlayer && window.innerWidth <= 968) {
+            this.miniPlayer.classList.add('show');
+            // Minimize full player on mobile
+            const playerSection = document.querySelector('.player-section');
+            if (playerSection) {
+                playerSection.classList.add('minimized');
+            }
+        }
+    }
+
+    closeMiniPlayer() {
+        if (this.miniPlayer) {
+            this.miniPlayer.classList.remove('show');
+        }
+        // Stop audio
+        this.audio.pause();
+        this.audio.currentTime = 0;
+        this.currentIndex = -1;
+        this.trackTitle.textContent = 'Chọn bài giảng để phát';
+        this.trackFolder.textContent = '---';
+    }
+
+    openFullPlayer() {
+        if (window.innerWidth <= 968) {
+            const playerSection = document.querySelector('.player-section');
+            if (playerSection) {
+                playerSection.classList.remove('minimized');
+                playerSection.classList.add('fullscreen');
+                
+                // Add close button for fullscreen
+                if (!playerSection.querySelector('.close-fullscreen')) {
+                    const closeBtn = document.createElement('button');
+                    closeBtn.className = 'close-fullscreen';
+                    closeBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                    closeBtn.addEventListener('click', () => this.closeFullPlayer());
+                    playerSection.insertBefore(closeBtn, playerSection.firstChild);
+                }
+            }
+        }
+    }
+
+    closeFullPlayer() {
+        const playerSection = document.querySelector('.player-section');
+        if (playerSection) {
+            playerSection.classList.remove('fullscreen');
+            playerSection.classList.add('minimized');
+        }
+    }
+
+    seekMini(e) {
+        const rect = this.miniProgressBar.getBoundingClientRect();
+        const percent = (e.clientX - rect.left) / rect.width;
+        const time = percent * this.audio.duration;
+        if (!isNaN(time)) {
+            this.audio.currentTime = time;
+        }
+    }
+
+    // ===== Bottom Navigation Handler =====
+    handleBottomNav(nav) {
+        // Update active state
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`[data-nav="${nav}"]`).classList.add('active');
+
+        // Handle navigation
+        switch(nav) {
+            case 'playlist':
+                this.currentFilter = 'all';
+                this.renderPlaylist();
+                this.toggleSidebar();
+                break;
+            case 'library':
+                this.currentFilter = 'favorites';
+                this.renderPlaylist();
+                this.toggleSidebar();
+                break;
+            case 'history':
+                this.currentFilter = 'recent';
+                this.renderPlaylist();
+                this.toggleSidebar();
+                break;
+        }
     }
 
     // ===== Search =====
@@ -618,6 +743,9 @@ class AudioPlayer {
         });
         this.audio.addEventListener('loadedmetadata', () => {
             this.durationEl.textContent = this.formatTime(this.audio.duration);
+            if (this.miniDuration) {
+                this.miniDuration.textContent = this.formatTime(this.audio.duration);
+            }
         });
 
         // Progress bar click
@@ -678,6 +806,69 @@ class AudioPlayer {
             if (e.target.closest('.track-item') && window.innerWidth <= 968) {
                 this.closeSidebar();
             }
+        });
+
+        // Mini Player Controls
+        if (this.miniPlayBtn) {
+            this.miniPlayBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.togglePlay();
+            });
+        }
+        if (this.miniPrevBtn) {
+            this.miniPrevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.prevTrack();
+            });
+        }
+        if (this.miniNextBtn) {
+            this.miniNextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.nextTrack();
+            });
+        }
+        if (this.miniCloseBtn) {
+            this.miniCloseBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.closeMiniPlayer();
+            });
+        }
+        if (this.miniPlayerContent) {
+            this.miniPlayerContent.addEventListener('click', () => {
+                this.openFullPlayer();
+            });
+        }
+        if (this.miniProgressBar) {
+            this.miniProgressBar.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.seekMini(e);
+            });
+        }
+
+        // Bottom Navigation
+        if (this.bottomNav) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    this.handleBottomNav(item.dataset.nav);
+                });
+            });
+        }
+
+        // Sync audio events with mini player
+        this.audio.addEventListener('play', () => {
+            if (this.miniPlayBtn) {
+                this.miniPlayBtn.querySelector('i').className = 'fas fa-pause';
+            }
+            const miniAlbumArt = document.querySelector('.mini-album-art');
+            if (miniAlbumArt) miniAlbumArt.classList.add('playing');
+        });
+        
+        this.audio.addEventListener('pause', () => {
+            if (this.miniPlayBtn) {
+                this.miniPlayBtn.querySelector('i').className = 'fas fa-play';
+            }
+            const miniAlbumArt = document.querySelector('.mini-album-art');
+            if (miniAlbumArt) miniAlbumArt.classList.remove('playing');
         });
 
         // Shuffle & Repeat

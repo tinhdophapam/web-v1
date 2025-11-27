@@ -862,30 +862,17 @@ class AudioPlayer {
         console.log('🔵 openFullPlayer called, window width:', window.innerWidth);
         if (window.innerWidth <= 968) {
             const playerSection = document.querySelector('.player-section');
-
             if (playerSection) {
-                console.log('✅ Player section found, computed display:', window.getComputedStyle(playerSection).display);
-
-                // CRITICAL FIX: Force display before adding fullscreen class
-                // CSS hides .player-section on mobile, we need to override
-                playerSection.style.display = 'flex';
-
-                console.log('✅ Opening full player, adding fullscreen class');
+                console.log('✅ Adding fullscreen class');
                 playerSection.classList.add('fullscreen');
-
-                // Reset touch state to prevent accidental close
-                this.touchStartY = 0;
-                this.touchEndY = 0;
-                this.canSwipeClose = false;
 
                 // Add close button for fullscreen
                 if (!playerSection.querySelector('.close-fullscreen')) {
                     const closeBtn = document.createElement('button');
                     closeBtn.className = 'close-fullscreen';
                     closeBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
-                    closeBtn.addEventListener('click', (e) => {
+                    closeBtn.addEventListener('click', () => {
                         console.log('🔴 Close button clicked');
-                        e.stopPropagation();
                         this.closeFullPlayer();
                     });
                     playerSection.insertBefore(closeBtn, playerSection.firstChild);
@@ -896,13 +883,10 @@ class AudioPlayer {
                     console.log('🔵 Hiding mini player');
                     this.miniPlayer.style.display = 'none';
                 }
-
-                console.log('✅ Full player should be visible now');
+                console.log('✅ Full player opened');
             } else {
-                console.error('❌ Player section NOT FOUND in DOM!');
+                console.error('❌ Player section NOT FOUND!');
             }
-        } else {
-            console.log('❌ Window width > 968, not opening full player');
         }
     }
 
@@ -911,18 +895,12 @@ class AudioPlayer {
         const playerSection = document.querySelector('.player-section');
         if (playerSection) {
             playerSection.classList.remove('fullscreen');
-
-            // CRITICAL FIX: Hide player section again on mobile
-            // CSS has display: none for .player-section on mobile
-            playerSection.style.display = 'none';
-
             // Remove close button
             const closeBtn = playerSection.querySelector('.close-fullscreen');
             if (closeBtn) {
                 closeBtn.remove();
             }
         }
-
         // Show mini player again
         if (this.miniPlayer) {
             console.log('✅ Showing mini player again');
@@ -937,54 +915,23 @@ class AudioPlayer {
         playerSection.addEventListener('touchstart', (e) => {
             if (playerSection.classList.contains('fullscreen')) {
                 this.touchStartY = e.touches[0].clientY;
-                // Only track if touch started near top (swipe-down area)
-                this.canSwipeClose = this.touchStartY < 100;
             }
         }, { passive: true });
 
         playerSection.addEventListener('touchmove', (e) => {
-            if (playerSection.classList.contains('fullscreen') && this.canSwipeClose) {
+            if (playerSection.classList.contains('fullscreen')) {
                 this.touchEndY = e.touches[0].clientY;
-                const swipeDistance = this.touchEndY - this.touchStartY;
-
-                // Visual feedback: move player down and reduce opacity
-                if (swipeDistance > 0) {
-                    const distance = Math.min(swipeDistance, 200);
-                    playerSection.style.transform = `translateY(${distance}px)`;
-                    playerSection.style.opacity = 1 - (distance / 400);
-                    playerSection.style.transition = 'none'; // Disable transition during drag
-                }
             }
         }, { passive: true });
 
         playerSection.addEventListener('touchend', () => {
             if (playerSection.classList.contains('fullscreen')) {
                 const swipeDistance = this.touchEndY - this.touchStartY;
-
-                // Re-enable transition for smooth animation
-                playerSection.style.transition = '';
-
                 // If swipe down more than 100px, close full player
                 if (swipeDistance > 100) {
-                    console.log('⬇️ Swipe down detected (' + swipeDistance + 'px), closing full player');
+                    console.log('⬇️ Swipe down detected, closing');
                     this.closeFullPlayer();
-                } else {
-                    // Reset position if swipe was too short
-                    playerSection.style.transform = '';
-                    playerSection.style.opacity = '';
                 }
-
-                this.canSwipeClose = false;
-            }
-        }, { passive: true });
-
-        // Handle touch cancel (e.g., call incoming)
-        playerSection.addEventListener('touchcancel', () => {
-            if (playerSection.classList.contains('fullscreen')) {
-                playerSection.style.transition = '';
-                playerSection.style.transform = '';
-                playerSection.style.opacity = '';
-                this.canSwipeClose = false;
             }
         }, { passive: true });
     }

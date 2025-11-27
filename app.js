@@ -1535,32 +1535,51 @@ class AudioPlayer {
         }
         // Click/Touch on mini player info (icon, tên bài, thời gian) to open full player
         // Buttons và progress bar sẽ KHÔNG mở full player
-        if (this.miniPlayerInfo) {
-            // Use touchstart for mobile (faster response, no 300ms delay)
-            // Use click for desktop (mouse users)
+        // Use event delegation on mini player container for better reliability
+        if (this.miniPlayer) {
+            console.log('✅ Setting up mini player click handlers via delegation');
+
             let touchHandled = false;
 
-            this.miniPlayerInfo.addEventListener('touchstart', (e) => {
-                if (!e.target.closest('.mini-player-controls')) {
-                    console.log('🔵 Mini player info touched - opening full player');
+            this.miniPlayer.addEventListener('touchstart', (e) => {
+                console.log('🔵 TOUCHSTART on mini player, target:', e.target.className, 'closest .mini-player-info:', !!e.target.closest('.mini-player-info'));
+
+                // Check if touch is on mini-player-info and NOT on controls or progress bar
+                if (e.target.closest('.mini-player-info') &&
+                    !e.target.closest('.mini-player-controls') &&
+                    !e.target.closest('.mini-progress-bar')) {
+                    console.log('✅ Valid touch on info area - opening full player');
                     this.openFullPlayer();
                     touchHandled = true;
                     e.preventDefault(); // Prevent click event from firing
+                    e.stopPropagation();
+                } else {
+                    console.log('❌ Touch on excluded area - ignoring');
                 }
             }, { passive: false });
 
             // Fallback for desktop/mouse users
-            this.miniPlayerInfo.addEventListener('click', (e) => {
+            this.miniPlayer.addEventListener('click', (e) => {
+                console.log('🔵 CLICK on mini player, target:', e.target.className, 'closest .mini-player-info:', !!e.target.closest('.mini-player-info'));
+
                 if (touchHandled) {
+                    console.log('⚠️ Already handled by touch - skipping');
                     touchHandled = false;
                     return; // Skip if already handled by touch
                 }
 
-                if (!e.target.closest('.mini-player-controls')) {
-                    console.log('🔵 Mini player info clicked - opening full player');
+                // Check if click is on mini-player-info and NOT on controls or progress bar
+                if (e.target.closest('.mini-player-info') &&
+                    !e.target.closest('.mini-player-controls') &&
+                    !e.target.closest('.mini-progress-bar')) {
+                    console.log('✅ Valid click on info area - opening full player');
                     this.openFullPlayer();
+                } else {
+                    console.log('❌ Click on excluded area - ignoring');
                 }
             });
+        } else {
+            console.error('❌ Mini player element NOT FOUND!');
         }
         
         // Progress bar seek (separate handler)

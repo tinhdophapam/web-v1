@@ -30,7 +30,7 @@ class AudioPlayer {
         this.favoriteBtn = document.getElementById('favoriteBtn');
         this.shareBtn = document.getElementById('shareBtn');
         this.downloadBtn = document.getElementById('downloadBtn');
-        // Queue button removed - now using filter tab instead
+        this.queueBtn = document.getElementById('queueBtn');
         this.queuePanel = document.getElementById('queuePanel');
         this.closeQueue = document.getElementById('closeQueue');
         this.queueContent = document.getElementById('queueContent');
@@ -40,7 +40,10 @@ class AudioPlayer {
         this.copyLink = document.getElementById('copyLink');
         this.totalTracks = document.getElementById('totalTracks');
         this.totalFavorites = document.getElementById('totalFavorites');
-
+        this.menuToggle = document.getElementById('menuToggle');
+        this.sidebar = document.getElementById('sidebar');
+        this.sidebarOverlay = document.getElementById('sidebarOverlay');
+        
         // Mini Player Elements
         this.miniPlayer = document.getElementById('miniPlayer');
         this.miniPlayBtn = document.getElementById('miniPlayBtn');
@@ -86,8 +89,6 @@ class AudioPlayer {
         this.updateStats();
         this.initBuddhaText();
         this.initializeLibraryView();
-        this.initializePlaylistView();
-        this.initializeDefaultView();
     }
 
     // ===== Buddha Text Animation =====
@@ -369,7 +370,7 @@ class AudioPlayer {
                     </div>
                     <div class="track-card-actions">
                         <button class="track-action-btn favorite-track-btn ${this.favorites.some(f => f.url === item.url) ? 'active' : ''}" data-url="${item.url}">
-                            <i class="fas fa-star"></i>
+                            <i class="fas fa-heart"></i>
                         </button>
                     </div>
                 `;
@@ -620,11 +621,11 @@ class AudioPlayer {
         this.addToRecentlyPlayed(track);
         this.updateQueue();
         this.saveState();
-
+        
         // Add playing animation to album art
         const albumArt = document.querySelector('.album-art-inner');
         if (albumArt) albumArt.classList.add('playing');
-
+        
         // Update mini player
         this.updateMiniPlayer(track);
         this.showMiniPlayer();
@@ -788,6 +789,28 @@ class AudioPlayer {
         }
     }
 
+    // ===== Mobile Sidebar Toggle =====
+    toggleSidebar() {
+        this.sidebar.classList.toggle('show');
+        if (this.sidebarOverlay) {
+            this.sidebarOverlay.classList.toggle('show');
+        }
+        // Prevent body scroll when sidebar is open
+        if (this.sidebar.classList.contains('show')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+    }
+
+    closeSidebar() {
+        this.sidebar.classList.remove('show');
+        if (this.sidebarOverlay) {
+            this.sidebarOverlay.classList.remove('show');
+        }
+        document.body.style.overflow = '';
+    }
+
     // ===== Mini Player Functions =====
     updateMiniPlayer(track) {
         if (this.miniTrackTitle) {
@@ -799,24 +822,10 @@ class AudioPlayer {
     }
 
     showMiniPlayer() {
-        console.log(`📊 Window width: ${window.innerWidth}px`);
-        if (window.innerWidth <= 968) {
-            console.log('📱 Mobile mode: Showing mini player');
-            if (this.miniPlayer) {
-                // ✅ FIX: Use 'block' instead of empty string to override CSS display:none
-                this.miniPlayer.style.display = 'block';
-                // Force reflow for smooth animation
-                this.miniPlayer.offsetHeight;
-                this.miniPlayer.classList.add('show');
-                console.log('✅ Mini player shown with display:', window.getComputedStyle(this.miniPlayer).display);
-            }
-        } else {
-            console.log('🖥️ Desktop mode: Full player already visible, hiding mini player');
-            // On desktop, ensure mini player is hidden
-            if (this.miniPlayer) {
-                this.miniPlayer.classList.remove('show');
-                this.miniPlayer.style.display = 'none';
-            }
+        if (this.miniPlayer && window.innerWidth <= 968) {
+            console.log('Showing mini player');
+            this.miniPlayer.classList.add('show');
+            this.miniPlayer.style.display = ''; // Ensure display is not none
         }
     }
 
@@ -840,35 +849,31 @@ class AudioPlayer {
         if (window.innerWidth <= 968) {
             const playerSection = document.querySelector('.player-section');
             if (playerSection) {
-                console.log('✅ Adding fullscreen class');
+                console.log('✅ Opening full player');
                 playerSection.classList.add('fullscreen');
-
+                
                 // Add close button for fullscreen
                 if (!playerSection.querySelector('.close-fullscreen')) {
                     const closeBtn = document.createElement('button');
                     closeBtn.className = 'close-fullscreen';
                     closeBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
-                    closeBtn.addEventListener('click', () => {
-                        console.log('🔴 Close button clicked');
-                        this.closeFullPlayer();
-                    });
+                    closeBtn.addEventListener('click', () => this.closeFullPlayer());
                     playerSection.insertBefore(closeBtn, playerSection.firstChild);
                 }
-
+                
                 // Hide mini player when full player is open
                 if (this.miniPlayer) {
                     console.log('🔵 Hiding mini player');
                     this.miniPlayer.style.display = 'none';
                 }
-                console.log('✅ Full player opened');
-            } else {
-                console.error('❌ Player section NOT FOUND!');
             }
+        } else {
+            console.log('❌ Window width > 968, not opening full player');
         }
     }
 
     closeFullPlayer() {
-        console.log('🔵 Closing full player');
+        console.log('Closing full player');
         const playerSection = document.querySelector('.player-section');
         if (playerSection) {
             playerSection.classList.remove('fullscreen');
@@ -880,8 +885,24 @@ class AudioPlayer {
         }
         // Show mini player again
         if (this.miniPlayer) {
-            console.log('✅ Showing mini player again');
-            this.miniPlayer.style.display = 'block';
+            console.log('Showing mini player again');
+            this.miniPlayer.style.display = '';
+        }
+    }
+
+    closeFullPlayer() {
+        const playerSection = document.querySelector('.player-section');
+        if (playerSection) {
+            playerSection.classList.remove('fullscreen');
+            // Remove close button
+            const closeBtn = playerSection.querySelector('.close-fullscreen');
+            if (closeBtn) {
+                closeBtn.remove();
+            }
+        }
+        // Show mini player again
+        if (this.miniPlayer) {
+            this.miniPlayer.style.display = '';
         }
     }
 
@@ -906,7 +927,6 @@ class AudioPlayer {
                 const swipeDistance = this.touchEndY - this.touchStartY;
                 // If swipe down more than 100px, close full player
                 if (swipeDistance > 100) {
-                    console.log('⬇️ Swipe down detected, closing');
                     this.closeFullPlayer();
                 }
             }
@@ -938,9 +958,12 @@ class AudioPlayer {
         // Handle navigation
         switch(nav) {
             case 'playlist':
-                // Show playlist view
-                document.getElementById('playlistView').classList.add('active');
-                this.renderPlaylistView();
+                // Show sidebar on mobile
+                if (window.innerWidth <= 968) {
+                    this.toggleSidebar();
+                }
+                // Keep player view visible on desktop
+                document.getElementById('playerView').classList.add('active');
                 break;
             case 'library':
                 // Show library view
@@ -957,237 +980,6 @@ class AudioPlayer {
                 document.getElementById('historyView').classList.add('active');
                 this.renderHistoryView();
                 break;
-        }
-    }
-
-    // ===== Render Playlist View =====
-    renderPlaylistView() {
-        const playlistViewContent = document.getElementById('playlistViewContent');
-        if (!playlistViewContent) return;
-
-        playlistViewContent.innerHTML = '';
-
-        // Playlist shows: Favorites + Quick access subfolders
-        this.renderFavoriteTracks(playlistViewContent);
-        this.renderQuickAccessSubfolders(playlistViewContent);
-    }
-
-    // ===== Render Favorite Tracks in Playlist View =====
-    renderFavoriteTracks(container) {
-        // Section header
-        const favoritesSection = document.createElement('div');
-        favoritesSection.className = 'playlist-section';
-        favoritesSection.innerHTML = `
-            <div class="playlist-section-header">
-                <h3><i class="fas fa-star"></i> Bài yêu thích</h3>
-                <span class="playlist-section-count">${this.favorites.length} bài</span>
-            </div>
-        `;
-        container.appendChild(favoritesSection);
-
-        // Check if empty
-        if (this.favorites.length === 0) {
-            const emptyState = document.createElement('div');
-            emptyState.className = 'empty-state-small';
-            emptyState.innerHTML = `
-                <p>Chưa có bài yêu thích. Nhấn vào <i class="fas fa-star"></i> để thêm bài vào playlist.</p>
-            `;
-            container.appendChild(emptyState);
-            return;
-        }
-
-        // Render favorite tracks
-        this.favorites.forEach(item => {
-            const flatIndex = this.flatPlaylist.findIndex(t => t.url === item.url);
-            const isActive = flatIndex === this.currentIndex;
-
-            const trackCard = document.createElement('div');
-            trackCard.className = `track-card ${isActive ? 'active' : ''}`;
-            trackCard.innerHTML = `
-                <div class="track-card-icon">
-                    <i class="fas ${isActive ? 'fa-volume-up' : 'fa-music'}"></i>
-                </div>
-                <div class="track-card-content">
-                    <div class="track-card-title">${item.title}</div>
-                    <div class="track-card-subtitle">${item.folder} › ${item.subfolder}</div>
-                </div>
-                <div class="track-card-actions">
-                    <button class="track-action-btn favorite-track-btn active" data-url="${item.url}">
-                        <i class="fas fa-star"></i>
-                    </button>
-                </div>
-            `;
-
-            trackCard.addEventListener('click', (e) => {
-                if (!e.target.closest('.track-action-btn')) {
-                    this.playTrack(flatIndex);
-                }
-            });
-
-            // Favorite button (to remove from favorites)
-            const favoriteBtn = trackCard.querySelector('.favorite-track-btn');
-            favoriteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleFavoriteTrack(item);
-                // Re-render playlist view to update
-                this.renderPlaylistView();
-            });
-
-            container.appendChild(trackCard);
-        });
-    }
-
-    // ===== Render Quick Access Subfolders =====
-    renderQuickAccessSubfolders(container) {
-        // Section header
-        const quickAccessSection = document.createElement('div');
-        quickAccessSection.className = 'playlist-section';
-        quickAccessSection.innerHTML = `
-            <div class="playlist-section-header">
-                <h3><i class="fas fa-star"></i> Thư mục yêu thích</h3>
-                <span class="playlist-section-count" id="favSubfolderCount">0 thư mục</span>
-            </div>
-        `;
-        container.appendChild(quickAccessSection);
-
-        // Get saved quick access subfolders from localStorage
-        const quickAccessSubfolders = JSON.parse(localStorage.getItem('quickAccessSubfolders') || '[]');
-
-        // Update count
-        const countSpan = container.querySelector('#favSubfolderCount');
-        if (countSpan) {
-            countSpan.textContent = `${quickAccessSubfolders.length} thư mục`;
-        }
-
-        if (quickAccessSubfolders.length === 0) {
-            const emptyState = document.createElement('div');
-            emptyState.className = 'empty-state-small';
-            emptyState.innerHTML = `
-                <p>Chưa có thư mục yêu thích. Vào <strong>Thư viện</strong> và nhấn vào <i class="fas fa-star"></i> ở subfolder để thêm vào playlist.</p>
-            `;
-            container.appendChild(emptyState);
-        } else {
-            // Render each subfolder card
-            quickAccessSubfolders.forEach((item, index) => {
-                const subfolderCard = document.createElement('div');
-                subfolderCard.className = 'folder-card';
-                subfolderCard.innerHTML = `
-                    <div class="folder-card-icon">
-                        <i class="fas fa-folder"></i>
-                    </div>
-                    <div class="folder-card-content">
-                        <div class="folder-card-title">${item.subfolderName}</div>
-                        <div class="folder-card-subtitle">${item.folderName} • ${item.itemCount} bài</div>
-                    </div>
-                    <div class="folder-card-actions">
-                        <button class="folder-remove-btn" data-index="${index}">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                `;
-
-                // Click to navigate to that subfolder
-                subfolderCard.addEventListener('click', (e) => {
-                    if (!e.target.closest('.folder-remove-btn')) {
-                        // Navigate to that subfolder in Library View
-                        if (window.innerWidth <= 968) {
-                            // On mobile: Switch to Library tab and navigate
-                            this.libraryFolderIndex = item.folderIndex;
-                            this.librarySubfolderIndex = item.subfolderIndex;
-                            this.libraryView = 'lectures';
-
-                            // Hide playlist view, show library view
-                            document.getElementById('playlistView').classList.remove('active');
-                            document.getElementById('libraryView').classList.add('active');
-
-                            // Update bottom nav to Library
-                            document.querySelectorAll('.nav-item').forEach(navItem => {
-                                navItem.classList.remove('active');
-                            });
-                            document.querySelector('[data-nav="library"]').classList.add('active');
-
-                            // Render library view with the selected subfolder
-                            this.renderLibraryView();
-                        } else {
-                            // On desktop: Navigate to subfolder
-                            this.navigateToSubfolders(item.folderIndex);
-                            this.navigateToLectures(item.subfolderIndex);
-                        }
-                    }
-                });
-
-                // Remove button
-                const removeBtn = subfolderCard.querySelector('.folder-remove-btn');
-                removeBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    quickAccessSubfolders.splice(index, 1);
-                    localStorage.setItem('quickAccessSubfolders', JSON.stringify(quickAccessSubfolders));
-                    this.renderPlaylistView();
-                });
-
-                container.appendChild(subfolderCard);
-            });
-        }
-    }
-
-    // ===== Toggle Favorite Subfolder =====
-    toggleFavoriteSubfolder(folderIndex, subfolderIndex, subfolderName, itemCount) {
-        const quickAccessSubfolders = JSON.parse(localStorage.getItem('quickAccessSubfolders') || '[]');
-
-        // Check if already in favorites
-        const existingIndex = quickAccessSubfolders.findIndex(item =>
-            item.folderIndex === folderIndex &&
-            item.subfolderIndex === subfolderIndex
-        );
-
-        if (existingIndex >= 0) {
-            // Remove from favorites
-            quickAccessSubfolders.splice(existingIndex, 1);
-        } else {
-            // Add to favorites
-            const folder = this.lectures[folderIndex];
-            quickAccessSubfolders.push({
-                folderName: folder.folder,
-                folderIndex: folderIndex,
-                subfolderName: subfolderName,
-                subfolderIndex: subfolderIndex,
-                itemCount: itemCount
-            });
-        }
-
-        localStorage.setItem('quickAccessSubfolders', JSON.stringify(quickAccessSubfolders));
-
-        // Re-render playlist view if it's currently visible
-        const playlistView = document.getElementById('playlistView');
-        if (playlistView && playlistView.classList.contains('active')) {
-            this.renderPlaylistView();
-        }
-    }
-
-    // ===== Initialize Playlist View =====
-    initializePlaylistView() {
-        // Render playlist view content when data is loaded
-        if (this.lectures.length > 0) {
-            this.renderPlaylistView();
-        }
-    }
-
-    // ===== Initialize Default View =====
-    initializeDefaultView() {
-        // On mobile, show library view by default
-        if (window.innerWidth <= 968) {
-            // Hide all content views
-            document.querySelectorAll('.content-view').forEach(view => {
-                view.classList.remove('active');
-            });
-            // Show library view
-            document.getElementById('libraryView').classList.add('active');
-
-            // Update bottom nav active state
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            document.querySelector('[data-nav="library"]').classList.add('active');
         }
     }
 
@@ -1286,13 +1078,6 @@ class AudioPlayer {
             folder.subfolders.forEach((subfolder, subfolderIndex) => {
                 const itemCount = subfolder.items ? subfolder.items.length : 0;
 
-                // Check if this subfolder is in favorites
-                const quickAccessSubfolders = JSON.parse(localStorage.getItem('quickAccessSubfolders') || '[]');
-                const isFavorite = quickAccessSubfolders.some(item =>
-                    item.folderIndex === this.libraryFolderIndex &&
-                    item.subfolderIndex === subfolderIndex
-                );
-
                 const subfolderCard = document.createElement('div');
                 subfolderCard.className = 'folder-card';
                 subfolderCard.innerHTML = `
@@ -1303,31 +1088,13 @@ class AudioPlayer {
                         <div class="folder-card-title">${subfolder.name}</div>
                         <div class="folder-card-subtitle">${itemCount} bài giảng</div>
                     </div>
-                    <div class="folder-card-actions">
-                        <button class="folder-favorite-btn ${isFavorite ? 'active' : ''}"
-                                data-folder-index="${this.libraryFolderIndex}"
-                                data-subfolder-index="${subfolderIndex}">
-                            <i class="fas fa-star"></i>
-                        </button>
-                    </div>
                     <div class="folder-card-arrow">
                         <i class="fas fa-chevron-right"></i>
                     </div>
                 `;
 
-                subfolderCard.addEventListener('click', (e) => {
-                    // Don't navigate if clicking on favorite button
-                    if (!e.target.closest('.folder-favorite-btn')) {
-                        this.navigateLibraryToLectures(subfolderIndex);
-                    }
-                });
-
-                // Favorite button handler
-                const favoriteBtn = subfolderCard.querySelector('.folder-favorite-btn');
-                favoriteBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.toggleFavoriteSubfolder(this.libraryFolderIndex, subfolderIndex, subfolder.name, itemCount);
-                    favoriteBtn.classList.toggle('active');
+                subfolderCard.addEventListener('click', () => {
+                    this.navigateLibraryToLectures(subfolderIndex);
                 });
 
                 container.appendChild(subfolderCard);
@@ -1380,7 +1147,7 @@ class AudioPlayer {
                     </div>
                     <div class="track-card-actions">
                         <button class="track-action-btn favorite-track-btn ${this.favorites.some(f => f.url === item.url) ? 'active' : ''}" data-url="${item.url}">
-                            <i class="fas fa-star"></i>
+                            <i class="fas fa-heart"></i>
                         </button>
                     </div>
                 `;
@@ -1678,6 +1445,23 @@ class AudioPlayer {
             this.themeToggleDesktop.addEventListener('click', () => this.toggleTheme());
         }
 
+        // Mobile Menu Toggle
+        if (this.menuToggle) {
+            this.menuToggle.addEventListener('click', () => this.toggleSidebar());
+        }
+
+        // Close sidebar when clicking overlay
+        if (this.sidebarOverlay) {
+            this.sidebarOverlay.addEventListener('click', () => this.closeSidebar());
+        }
+
+        // Close sidebar when clicking on a track (mobile)
+        this.playlist.addEventListener('click', (e) => {
+            if (e.target.closest('.track-item') && window.innerWidth <= 968) {
+                this.closeSidebar();
+            }
+        });
+
         // Mini Player Controls
         if (this.miniPlayBtn) {
             this.miniPlayBtn.addEventListener('click', (e) => {
@@ -1703,16 +1487,29 @@ class AudioPlayer {
                 this.closeMiniPlayer();
             });
         }
-        // Click on mini player info (icon, tên bài, thời gian) to open full player
-        // SIMPLE approach like app-ref.js - just click on .mini-player-info
+        // Click/Touch on mini player info (icon, tên bài, thời gian) to open full player
+        // Buttons và progress bar sẽ KHÔNG mở full player
         if (this.miniPlayerInfo) {
-            console.log('✅ Setting up mini player info click handler');
-            this.miniPlayerInfo.addEventListener('click', () => {
-                console.log('🔵 Mini player info clicked - opening full player');
+            const handleMiniPlayerInfoClick = (e) => {
+                console.log('🔵 Mini player info clicked:', e.target.className);
+
+                // CHỈ mở full player khi click vào .mini-player-info
+                // KHÔNG mở khi click vào buttons
+                if (!e.target.closest('.mini-player-controls')) {
+                    console.log('✅ Opening full player from mini-player-info');
+                    this.openFullPlayer();
+                } else {
+                    console.log('❌ Clicked on controls, not opening');
+                }
+            };
+
+            // Use both click and touchstart for better mobile responsiveness
+            this.miniPlayerInfo.addEventListener('click', handleMiniPlayerInfoClick);
+            this.miniPlayerInfo.addEventListener('touchstart', (e) => {
+                console.log('🔵 Mini player info touched');
                 this.openFullPlayer();
-            });
-        } else {
-            console.error('❌ Mini player info element NOT FOUND!');
+                e.preventDefault(); // Prevent click event from firing
+            }, { passive: false });
         }
         
         // Progress bar seek (separate handler)
@@ -1774,10 +1571,9 @@ class AudioPlayer {
         // Download
         this.downloadBtn.addEventListener('click', () => this.downloadTrack());
 
-        // Queue panel (keep for backward compatibility, but now mainly use tab)
-        if (this.closeQueue) {
-            this.closeQueue.addEventListener('click', () => this.queuePanel.classList.remove('show'));
-        }
+        // Queue
+        this.queueBtn.addEventListener('click', () => this.toggleQueue());
+        this.closeQueue.addEventListener('click', () => this.queuePanel.classList.remove('show'));
 
         // Filter tabs
         this.setupFilterTabs();
@@ -1872,11 +1668,11 @@ class AudioPlayer {
         if (index >= 0) {
             this.favorites.splice(index, 1);
             this.favoriteBtn.classList.remove('active');
-            this.favoriteBtn.querySelector('i').className = 'far fa-star';
+            this.favoriteBtn.querySelector('i').className = 'far fa-heart';
         } else {
             this.favorites.push(track);
             this.favoriteBtn.classList.add('active');
-            this.favoriteBtn.querySelector('i').className = 'fas fa-star';
+            this.favoriteBtn.querySelector('i').className = 'fas fa-heart';
         }
         
         localStorage.setItem('favorites', JSON.stringify(this.favorites));
@@ -1894,7 +1690,7 @@ class AudioPlayer {
         const isFavorite = this.favorites.some(f => f.url === track.url);
         
         this.favoriteBtn.classList.toggle('active', isFavorite);
-        this.favoriteBtn.querySelector('i').className = isFavorite ? 'fas fa-star' : 'far fa-star';
+        this.favoriteBtn.querySelector('i').className = isFavorite ? 'fas fa-heart' : 'far fa-heart';
     }
 
     // ===== Recently Played =====
@@ -1938,50 +1734,6 @@ class AudioPlayer {
         this.queueContent.innerHTML = html;
 
         document.querySelectorAll('.queue-item').forEach(el => {
-            el.addEventListener('click', () => {
-                const index = parseInt(el.dataset.index);
-                this.playTrack(index);
-            });
-        });
-    }
-
-    // ===== Render Queue View =====
-    renderQueueView() {
-        const queueViewContent = document.getElementById('queueViewContent');
-        if (!queueViewContent) return;
-
-        if (this.flatPlaylist.length === 0 || this.currentIndex < 0) {
-            queueViewContent.innerHTML = '<div class="empty-message"><p>Chưa có bài nào trong hàng đợi</p></div>';
-            return;
-        }
-
-        let html = '';
-        const startIndex = this.currentIndex;
-        const queueItems = this.flatPlaylist.slice(startIndex);
-
-        queueItems.forEach((track, idx) => {
-            const actualIndex = startIndex + idx;
-            const isPlaying = actualIndex === this.currentIndex;
-            html += `
-                <div class="track-item ${isPlaying ? 'playing' : ''}" data-index="${actualIndex}">
-                    <div class="track-icon">
-                        ${isPlaying ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-music"></i>'}
-                    </div>
-                    <div class="track-content">
-                        <div class="track-title">${track.title}</div>
-                        <div class="track-meta">
-                            <span>${track.folder}</span>
-                            ${track.duration ? `<span>${track.duration}</span>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        queueViewContent.innerHTML = html;
-
-        // Add click listeners
-        queueViewContent.querySelectorAll('.track-item').forEach(el => {
             el.addEventListener('click', () => {
                 const index = parseInt(el.dataset.index);
                 this.playTrack(index);

@@ -1706,8 +1706,25 @@ class AudioPlayer {
                     this.audio.src = track.url;
                     this.trackTitle.textContent = track.title;
                     this.trackFolder.textContent = `${track.folder} • ${track.subfolder}`;
+                    
+                    // Restore playback position
                     this.audio.currentTime = state.currentTime || 0;
+                    
+                    // Update UI
                     this.updateActiveTrack();
+                    this.updateFavoriteButton();
+                    
+                    // Update and show mini player on mobile
+                    this.updateMiniPlayer(track);
+                    if (window.innerWidth <= 968) {
+                        this.showMiniPlayer();
+                    }
+                    
+                    // Update progress bar after metadata loads
+                    this.audio.addEventListener('loadedmetadata', () => {
+                        this.audio.currentTime = state.currentTime || 0;
+                        this.updateProgress();
+                    }, { once: true });
                 }
             } catch (e) {
                 console.error('Error loading state:', e);

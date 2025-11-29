@@ -1765,34 +1765,43 @@ class AudioPlayer {
         this.showError('Cả link gốc và link backup đều không phát được');
     }
 
-    // Convert Google Drive download link to streaming link
-    convertGoogleDriveUrl(url) {
-        if (!url) return url;
-
-        // Check if it's a Google Drive URL
-        if (url.includes('drive.google.com')) {
-            // Extract file ID from different Google Drive URL formats
+    // Load Google Drive file as blob and return blob URL
+    async loadGoogleDriveAsBlob(url) {
+        try {
+            // Extract file ID
             let fileId = null;
-
-            // Format: https://drive.google.com/uc?export=download&id=FILE_ID
             const downloadMatch = url.match(/[?&]id=([^&]+)/);
             if (downloadMatch) {
                 fileId = downloadMatch[1];
             }
 
-            // Format: https://drive.google.com/file/d/FILE_ID/view
-            const fileMatch = url.match(/\/file\/d\/([^\/]+)/);
-            if (fileMatch) {
-                fileId = fileMatch[1];
+            if (!fileId) {
+                throw new Error('Cannot extract file ID from URL');
             }
 
-            // If we found a file ID, convert to streaming URL
-            if (fileId) {
-                return `https://drive.google.com/uc?export=open&id=${fileId}`;
+            // Use Google Drive direct download URL with confirm parameter
+            const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`;
+
+            console.log('Downloading from Google Drive:', downloadUrl);
+
+            const response = await fetch(downloadUrl, {
+                method: 'GET',
+                mode: 'cors'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
+
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+
+            console.log('Successfully created blob URL');
+            return blobUrl;
+        } catch (error) {
+            console.error('Error loading Google Drive file:', error);
+            throw error;
         }
-
-        return url;
     }
 
     // ===== State Management =====
@@ -2155,7 +2164,7 @@ class AudioPlayer {
         });
 
         // Error handling
-        this.audio.addEventListener('error', (e) => {
+        this.audio.addEventListener('error', async (e) => {
             // Try backup URL if available and not already using it
             if (!this.usingBackupUrl && this.currentIndex >= 0) {
                 const track = this.flatPlaylist[this.currentIndex];
@@ -2164,16 +2173,27 @@ class AudioPlayer {
                     this.usingBackupUrl = true;
                     const currentTime = this.audio.currentTime || 0;
 
-                    // Convert Google Drive URL to streaming format
-                    const streamingUrl = this.convertGoogleDriveUrl(track.backupUrl);
+                    try {
+                        // Check if it's a Google Drive URL
+                        let backupSrc = track.backupUrl;
+                        if (track.backupUrl.includes('drive.google.com')) {
+                            // Load Google Drive file as blob
+                            this.showError('Đang tải link dự phòng...');
+                            backupSrc = await this.loadGoogleDriveAsBlob(track.backupUrl);
+                        }
 
-                    this.audio.src = streamingUrl;
-                    this.audio.currentTime = currentTime;
-                    this.audio.play().catch(err => {
+                        this.audio.src = backupSrc;
+                        this.audio.currentTime = currentTime;
+                        await this.audio.play();
+
+                        // Clear the loading message on success
+                        this.errorMessage.style.display = 'none';
+                    } catch (err) {
                         // If backup also fails, show error
+                        console.error('Backup URL also failed:', err);
                         this.usingBackupUrl = false;
                         this.showBackupError();
-                    });
+                    }
                     return;
                 }
             }
